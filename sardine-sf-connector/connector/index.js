@@ -173,7 +173,7 @@ async function startup() {
 }
 
 // ─── Start ─────────────────────────────────────────────────────────────────
-const PORT = 3002;
+const PORT = 3002; // Fixed internal port — do not use process.env.PORT
 app.listen(PORT, () => {
   console.log(`[Connector] Running on http://localhost:${PORT}`);
   startup();
