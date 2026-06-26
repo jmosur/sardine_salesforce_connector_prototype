@@ -150,19 +150,27 @@ function applyScenario(customer, scenario) {
       p.fraudScore = Math.min(99, p.fraudScore + 30);
       p.caseStatus = "UNDER_REVIEW";
       p.caseId = p.caseId || `case-${Math.floor(Math.random() * 9000 + 1000)}`;
-      p.deviceRisk.signals.push("new_device_high_risk");
+      // Overwrite instead of push — prevents unbounded array growth
+      p.deviceRisk.signals = ["new_device_high_risk", "velocity_abuse"];
+      p.deviceRisk.level = "HIGH";
       break;
     case "clear":
       p.overallRiskLevel = "LOW";
       p.fraudScore = Math.max(1, p.fraudScore - 40);
       p.caseStatus = "CLEARED";
       p.amlRiskLevel = "LOW";
+      p.deviceRisk.signals = [];
+      p.deviceRisk.level = "LOW";
+      p.behaviorRisk.signals = [];
+      p.checkpointsFailed = [];
+      p.kycStatus = "APPROVED";
       break;
     case "kyc_fail":
       p.kycStatus = "REJECTED";
       p.overallRiskLevel = "HIGH";
       p.fraudScore = Math.min(99, p.fraudScore + 20);
-      p.checkpointsFailed.push("kyc_enhanced");
+      // Overwrite instead of push — prevents accumulation
+      p.checkpointsFailed = ["kyc_enhanced"];
       break;
     case "aml_flag":
       p.amlRiskLevel = "HIGH";
