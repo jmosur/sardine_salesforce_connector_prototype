@@ -1,5 +1,0 @@
-[deploy]
-startCommand = "node server.js"
-healthcheckPath = "/api/accounts"
-healthcheckTimeout = 30
-restartPolicyType = "on_failure"
