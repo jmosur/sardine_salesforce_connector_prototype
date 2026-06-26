@@ -4,14 +4,22 @@
  * Simulates Salesforce REST API for Account object upserts.
  * Stores field values in memory and serves them to the demo UI.
  * Also serves the demo dashboard HTML at /
+ *
+ * Proxy routes forward browser requests to internal services,
+ * so the UI works on Railway without hardcoded localhost URLs.
  */
 
 const express = require("express");
 const path = require("path");
+const axios = require("axios");
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+
+// Internal service URLs (server-to-server, always localhost)
+const CONNECTOR_INTERNAL = "http://localhost:3002";
+const SARDINE_INTERNAL   = "http://localhost:3001";
 
 // ─── In-Memory Salesforce "Database" ──────────────────────────────────────
 const accounts = {
@@ -25,7 +33,6 @@ const accounts = {
     BillingState: "CA",
     AccountOwner: "Sarah Chen",
     Type: "Customer",
-    // Sardine custom fields (initially empty — populated by connector)
     Sardine_Risk_Level__c: "—",
     Sardine_Fraud_Score__c: null,
     Sardine_KYC_Status__c: "—",
@@ -105,10 +112,8 @@ app.patch("/services/data/v58.0/sobjects/Account/:id", (req, res) => {
   const updatedFields = req.body;
   const prevRisk = account.Sardine_Risk_Level__c;
 
-  // Apply field updates
   Object.assign(account, updatedFields);
 
-  // Track history for the demo
   account._updateHistory.unshift({
     timestamp: new Date().toISOString(),
     prevRisk,
@@ -121,7 +126,7 @@ app.patch("/services/data/v58.0/sobjects/Account/:id", (req, res) => {
   res.status(204).send();
 });
 
-// GET /services/data/v58.0/sobjects/Account/:id — fetch account
+// GET /services/data/v58.0/sobjects/Account/:id
 app.get("/services/data/v58.0/sobjects/Account/:id", (req, res) => {
   const account = accounts[req.params.id];
   if (!account) return res.status(404).json({ errorCode: "NOT_FOUND" });
@@ -133,15 +138,52 @@ app.get("/api/accounts", (req, res) => {
   res.json(Object.values(accounts));
 });
 
-// GET /api/accounts/:id — single account for demo UI
+// GET /api/accounts/:id
 app.get("/api/accounts/:id", (req, res) => {
   const account = accounts[req.params.id];
   if (!account) return res.status(404).json({ error: "Not found" });
   res.json(account);
 });
 
+// ─── Proxy routes — browser calls these, server forwards internally ────────
+// Needed on Railway where localhost:3001/3002 aren't reachable from the browser
+
+// Proxy: connector events
+app.get("/proxy/connector/events", async (req, res) => {
+  try {
+    const r = await axios.get(`${CONNECTOR_INTERNAL}/events`, { timeout: 3000 });
+    res.json(r.data);
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// Proxy: connector status
+app.get("/proxy/connector/status", async (req, res) => {
+  try {
+    const r = await axios.get(`${CONNECTOR_INTERNAL}/status`, { timeout: 3000 });
+    res.json(r.data);
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// Proxy: sardine simulate
+app.post("/proxy/sardine/customers/:id/simulate", async (req, res) => {
+  try {
+    const r = await axios.post(
+      `${SARDINE_INTERNAL}/v1/customers/${req.params.id}/simulate`,
+      req.body,
+      { timeout: 3000 }
+    );
+    res.json(r.data);
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
 // ─── Start ─────────────────────────────────────────────────────────────────
-const PORT = 3003;
+const PORT = process.env.PORT || 3003;
 app.listen(PORT, () => {
-  console.log(`[Salesforce] Mock API + UI running on http://localhost:${PORT}`);
+  console.log(`[Salesforce] Mock API + UI running on port ${PORT}`);
 });
