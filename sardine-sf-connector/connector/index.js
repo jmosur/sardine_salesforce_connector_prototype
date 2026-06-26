@@ -19,7 +19,8 @@ const app = express();
 app.use(express.json());
 
 const SARDINE_URL = "http://localhost:3001";
-const SALESFORCE_URL = "http://localhost:3003";
+const SF_PORT = process.env.PORT || 3003;
+const SALESFORCE_URL = `http://localhost:${SF_PORT}`;
 const CONNECTOR_URL = "http://localhost:3002";
 
 // ─── Event Log (in-memory for demo) ───────────────────────────────────────
