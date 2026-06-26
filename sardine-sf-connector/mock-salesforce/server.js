@@ -186,4 +186,17 @@ app.post("/proxy/sardine/customers/:id/simulate", async (req, res) => {
 const PORT = process.env.PORT || 3003;
 app.listen(PORT, () => {
   console.log(`[Salesforce] Mock API + UI running on port ${PORT}`);
+
+  // Keep-alive: ping ourselves every 5 minutes to prevent Railway idle shutdown
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    const keepAliveUrl = `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/accounts`;
+    setInterval(async () => {
+      try {
+        await axios.get(keepAliveUrl, { timeout: 5000 });
+        console.log(`[Salesforce] Keep-alive ping OK`);
+      } catch (e) {
+        console.log(`[Salesforce] Keep-alive ping failed: ${e.message}`);
+      }
+    }, 5 * 60 * 1000); // every 5 minutes
+  }
 });
