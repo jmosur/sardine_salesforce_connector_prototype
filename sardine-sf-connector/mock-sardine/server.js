@@ -224,7 +224,7 @@ setInterval(() => {
 }, 30000);
 
 // ─── Start ─────────────────────────────────────────────────────────────────
-const PORT = 3001;
+const PORT = 3001; // Fixed internal port — do not use process.env.PORT
 app.listen(PORT, () => {
   console.log(`[Sardine] Mock API running on http://localhost:${PORT}`);
   console.log(`[Sardine] Customers: ${Object.keys(customers).length} | Auto-simulation: every 30s`);
